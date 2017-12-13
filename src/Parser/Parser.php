@@ -16,15 +16,10 @@ use DaveRandom\XsdDistiller\Parser\Exceptions\MissingDefinitionException;
 use DaveRandom\XsdDistiller\Parser\Exceptions\ParseErrorException;
 use DaveRandom\XsdDistiller\Schema;
 use Room11\DOMUtils\LibXMLFatalErrorException;
-use const DaveRandom\XsdDistiller\WSDL_SCHEMA_URI;
 use const DaveRandom\XsdDistiller\XML_SCHEMA_URI;
 
 final class Parser
 {
-    private const SIMPLE_TYPE_XPATH  = '/wsdl:types/xs:schema/xs:simpleType';
-    private const COMPLEX_TYPE_XPATH = '/wsdl:types/xs:schema/xs:complexType';
-    private const ROOT_ELEMENT_XPATH = '/wsdl:types/xs:schema/xs:element';
-
     private $typeParser;
     private $typeResolver;
 
@@ -42,7 +37,7 @@ final class Parser
      */
     private function parseTypes(ParsingContext $ctx): void
     {
-        foreach ($ctx->xpath->query(self::SIMPLE_TYPE_XPATH) as $node) {
+        foreach ($ctx->xpath->query('/xs:simpleType') as $node) {
             $type = $this->typeParser->parseSimpleType($ctx, $node);
 
             if (!($type->getName() instanceof FullyQualifiedName)) {
@@ -52,7 +47,7 @@ final class Parser
             $ctx->typeDefinitions->add($type);
         }
 
-        foreach ($ctx->xpath->query(self::COMPLEX_TYPE_XPATH) as $node) {
+        foreach ($ctx->xpath->query('/xs:complexType') as $node) {
             $type = $this->typeParser->parseComplexType($ctx, $node);
 
             if (!($type->getName() instanceof FullyQualifiedName)) {
@@ -71,7 +66,7 @@ final class Parser
      */
     private function parseRootElements(ParsingContext $ctx): void
     {
-        foreach ($ctx->xpath->query(self::ROOT_ELEMENT_XPATH) as $node) {
+        foreach ($ctx->xpath->query('/xs:element') as $node) {
             $ctx->rootElementDefinitions->add($this->typeParser->parseElement($ctx, $node, true));
         }
     }
@@ -130,7 +125,6 @@ final class Parser
     {
         $xpath = new \DOMXPath($document);
         $xpath->registerNamespace('xs', XML_SCHEMA_URI);
-        $xpath->registerNamespace('wsdl', WSDL_SCHEMA_URI);
 
         $ctx = new ParsingContext($document, $xpath);
 
@@ -174,7 +168,7 @@ final class Parser
         try {
             return $this->parseDocument(\Room11\DOMUtils\domdocument_load_xml($xml));
         } catch (LibXMLFatalErrorException $e) {
-            throw new LoadErrorException("Unable to load WSDL: Error parsing document: {$e->getMessage()}", $e->getCode(), $e);
+            throw new LoadErrorException("Unable to load schema: Error parsing document: {$e->getMessage()}", $e->getCode(), $e);
         }
     }
 
@@ -189,7 +183,7 @@ final class Parser
         $doc = new \DOMDocument();
 
         if (!$doc->load($path)) {
-            throw new LoadErrorException('Unable to load WSDL: Could not retrieve document from supplied path');
+            throw new LoadErrorException('Unable to load schema: Could not retrieve document from supplied path');
         }
 
         return $this->parseDocument($doc);
