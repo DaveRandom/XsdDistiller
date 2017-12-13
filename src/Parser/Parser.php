@@ -8,6 +8,7 @@ use DaveRandom\XsdDistiller\Entities\Registries\ReadOnlyTypeRegistry;
 use DaveRandom\XsdDistiller\FullyQualifiedName;
 use DaveRandom\XsdDistiller\Parser\Definitions\ComplexTypeDefinition;
 use DaveRandom\XsdDistiller\Parser\Exceptions\CircularReferenceException;
+use DaveRandom\XsdDistiller\Parser\Exceptions\InvalidDocumentException;
 use DaveRandom\XsdDistiller\Parser\Exceptions\InvalidElementDefinitionException;
 use DaveRandom\XsdDistiller\Parser\Exceptions\InvalidReferenceException;
 use DaveRandom\XsdDistiller\Parser\Exceptions\InvalidTypeDefinitionException;
@@ -16,6 +17,7 @@ use DaveRandom\XsdDistiller\Parser\Exceptions\MissingDefinitionException;
 use DaveRandom\XsdDistiller\Parser\Exceptions\ParseErrorException;
 use DaveRandom\XsdDistiller\Schema;
 use Room11\DOMUtils\LibXMLFatalErrorException;
+use const DaveRandom\XsdDistiller\RESOURCES_ROOT_DIR;
 use const DaveRandom\XsdDistiller\XML_SCHEMA_URI;
 
 final class Parser
@@ -118,11 +120,30 @@ final class Parser
 
     /**
      * @param \DOMDocument $document
+     * @throws InvalidDocumentException
+     */
+    private function validateDocument(\DOMDocument $document): void
+    {
+        if ($document->documentElement->namespaceURI !== XML_SCHEMA_URI || $document->documentElement->localName !== 'schema') {
+            throw new InvalidDocumentException(
+                'Root element of XML schema must be <schema> in the ' . XML_SCHEMA_URI . ' namespace'
+            );
+        }
+
+        if (!$document->schemaValidate(RESOURCES_ROOT_DIR . '/schema.xsd')) {
+            throw new InvalidDocumentException("Schema validation failed");
+        }
+    }
+
+    /**
+     * @param \DOMDocument $document
      * @return Schema
      * @throws ParseErrorException
      */
     public function parseDocument(\DOMDocument $document): Schema
     {
+        $this->validateDocument($document);
+
         $xpath = new \DOMXPath($document);
         $xpath->registerNamespace('xs', XML_SCHEMA_URI);
 
@@ -145,7 +166,7 @@ final class Parser
     public function parseDocumentFragment(\DOMElement $rootElement): Schema
     {
         if ($rootElement->namespaceURI !== XML_SCHEMA_URI || $rootElement->localName !== 'schema') {
-            throw new \InvalidArgumentException(
+            throw new InvalidDocumentException(
                 'Root element of XML schema must be <schema> in the ' . XML_SCHEMA_URI . ' namespace'
             );
         }
