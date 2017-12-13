@@ -5,6 +5,7 @@ namespace DaveRandom\XsdDistiller\Parser;
 use DaveRandom\XsdDistiller\DefinitionLocation;
 use DaveRandom\XsdDistiller\EntityName;
 use DaveRandom\XsdDistiller\FullyQualifiedName;
+use function DaveRandom\XsdDistiller\parse_fully_qualified_entity_name_from_attribute;
 use DaveRandom\XsdDistiller\Parser\Definitions\ComplexTypeDefinition;
 use DaveRandom\XsdDistiller\Parser\Definitions\ElementDefinition;
 use DaveRandom\XsdDistiller\Parser\Definitions\ListTypeDefinition;
@@ -18,35 +19,6 @@ use function DaveRandom\XsdDistiller\domelement_get_target_namespace;
 final class EntityParser
 {
     /**
-     * @param \DOMElement $node
-     * @param string $attribute
-     * @return \DaveRandom\XsdDistiller\FullyQualifiedName
-     * @throws InvalidReferenceException
-     */
-    private function parseFullyQualifiedTypeName(\DOMElement $node, string $attribute): FullyQualifiedName
-    {
-        $nameParts = \explode(':', $node->getAttribute($attribute));
-
-        switch (\count($nameParts)) {
-            case 1: {
-                $name = $nameParts[0];
-                $namespace = domelement_get_target_namespace($node);
-                break;
-            }
-
-            case 2: {
-                [$prefix, $name] = $nameParts;
-                $namespace = $node->lookupNamespaceUri($prefix);
-                break;
-            }
-
-            default: throw new InvalidReferenceException('Invalid type reference ' . $node->getAttribute($attribute));
-        }
-
-        return new FullyQualifiedName($namespace, $name);
-    }
-
-    /**
      * @param \DOMElement $typeNode
      * @param \DOMElement $restrictionNode
      * @return RestrictionTypeDefinition
@@ -56,7 +28,7 @@ final class EntityParser
     {
         $location = new DefinitionLocation($typeNode);
         $name = $this->getTypeName($typeNode);
-        $baseName = $this->parseFullyQualifiedTypeName($restrictionNode, 'base');
+        $baseName = parse_fully_qualified_entity_name_from_attribute($restrictionNode, 'base');
 
         // todo: actually parse restriction info
 
@@ -73,7 +45,7 @@ final class EntityParser
     {
         $location = new DefinitionLocation($typeNode);
         $name = $this->getTypeName($typeNode);
-        $baseName = $this->parseFullyQualifiedTypeName($listNode, 'base');
+        $baseName = parse_fully_qualified_entity_name_from_attribute($listNode, 'base');
 
         // todo: actually parse list info
 
@@ -141,7 +113,7 @@ final class EntityParser
 
         if ($extensionNodes->length === 1) {
             $membersParent = $extensionNodes->item(0);
-            $baseTypeName = $this->parseFullyQualifiedTypeName($membersParent, 'base');
+            $baseTypeName = parse_fully_qualified_entity_name_from_attribute($membersParent, 'base');
         }
 
         // todo: support content container other than <xs:sequence>
@@ -189,7 +161,7 @@ final class EntityParser
         }
 
         if ($node->hasAttribute('type')) {
-            $typeName = $this->parseFullyQualifiedTypeName($node, 'type');
+            $typeName = parse_fully_qualified_entity_name_from_attribute($node, 'type');
 
             return new ElementDefinition($location, $name, $typeName, $minOccurs, $maxOccurs);
         }

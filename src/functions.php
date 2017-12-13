@@ -2,6 +2,7 @@
 
 namespace DaveRandom\XsdDistiller;
 
+use DaveRandom\XsdDistiller\Parser\Exceptions\InvalidReferenceException;
 const XML_SCHEMA_URI = 'http://www.w3.org/2001/XMLSchema';
 
 \define(__NAMESPACE__ . '\\LIB_ROOT_DIR', \realpath(__DIR__ . '/..'));
@@ -21,4 +22,33 @@ function domelement_get_target_namespace(\DOMElement $element): string
     } while ($element = $element->parentNode);
 
     return $targetNamespace;
+}
+
+/**
+ * @param \DOMElement $node
+ * @param string $attribute
+ * @return \DaveRandom\XsdDistiller\FullyQualifiedName
+ * @throws InvalidReferenceException
+ */
+function parse_fully_qualified_entity_name_from_attribute(\DOMElement $node, string $attribute): FullyQualifiedName
+{
+    $nameParts = \explode(':', $node->getAttribute($attribute));
+
+    switch (\count($nameParts)) {
+        case 1: {
+            $name = $nameParts[0];
+            $namespace = domelement_get_target_namespace($node);
+            break;
+        }
+
+        case 2: {
+            [$prefix, $name] = $nameParts;
+            $namespace = $node->lookupNamespaceUri($prefix);
+            break;
+        }
+
+        default: throw new InvalidReferenceException('Invalid type reference ' . $node->getAttribute($attribute));
+    }
+
+    return new FullyQualifiedName($namespace, $name);
 }
