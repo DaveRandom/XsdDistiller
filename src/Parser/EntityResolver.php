@@ -155,23 +155,27 @@ final class EntityResolver
 
     /**
      * @param ParsingContext $ctx
-     * @param ComplexTypeDefinition $type
+     * @param ComplexTypeDefinition $typeDef
      * @throws InvalidReferenceException
      * @throws MissingDefinitionException
      */
-    public function resolveComplexTypeMembers(ParsingContext $ctx, ComplexTypeDefinition $type): void
+    public function resolveComplexTypeMembers(ParsingContext $ctx, ComplexTypeDefinition $typeDef): void
     {
-        if (!isset($ctx->memberStores[(string)$type->getName()])) {
-            throw new InvalidReferenceException("Member store does not exist for {$type}");
+        if (!isset($ctx->memberStores[(string)$typeDef->getName()])) {
+            throw new InvalidReferenceException("Member store does not exist for {$typeDef}");
         }
 
-        $memberStore = $ctx->memberStores[(string)$type->getName()];
-        unset($ctx->memberStores[(string)$type->getName()]);
+        $memberStore = $ctx->memberStores[(string)$typeDef->getName()];
+        unset($ctx->memberStores[(string)$typeDef->getName()]);
 
-        foreach ($type->getMemberDefinitions() as $memberDef) {
-            $element = $this->resolveElement($ctx, $memberDef, $type);
-            $memberStore[] = $element;
+        foreach ($typeDef->getMemberDefinitions() as $memberDef) {
+            $memberStore[] = $this->resolveElement($ctx, $memberDef, $typeDef);
         }
+
+        // Get the members to force creation of member collection object
+        // todo: this is hacky af, fix
+        /** @noinspection PhpUndefinedMethodInspection */
+        $ctx->types->get($typeDef->getName())->getMembers();
     }
 
     /**

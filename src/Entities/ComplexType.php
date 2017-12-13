@@ -23,9 +23,6 @@ final class ComplexType extends Type
         return $this->base !== null;
     }
 
-    /**
-     * @return ComplexType
-     */
     public function getBaseType(): ComplexType
     {
         if ($this->base === null) {
@@ -35,11 +32,12 @@ final class ComplexType extends Type
         return $this->base;
     }
 
-    /**
-     * @return Element[]
-     */
-    public function getMembers(): array
+    public function getMembers(): ComplexTypeMemberCollection
     {
-        return $this->memberStore->getArrayCopy();
+        if (!$this->memberStore instanceof ComplexTypeMemberCollection) {
+            $this->memberStore = new ComplexTypeMemberCollection($this->memberStore);
+        }
+
+        return $this->memberStore;
     }
 }
