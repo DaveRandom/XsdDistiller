@@ -5,7 +5,6 @@ namespace DaveRandom\XsdDistiller\Parser;
 use DaveRandom\XsdDistiller\DefinitionLocation;
 use DaveRandom\XsdDistiller\EntityName;
 use DaveRandom\XsdDistiller\FullyQualifiedName;
-use function DaveRandom\XsdDistiller\parse_fully_qualified_entity_name_from_attribute;
 use DaveRandom\XsdDistiller\Parser\Definitions\ComplexTypeDefinition;
 use DaveRandom\XsdDistiller\Parser\Definitions\ElementDefinition;
 use DaveRandom\XsdDistiller\Parser\Definitions\ListTypeDefinition;
@@ -14,7 +13,9 @@ use DaveRandom\XsdDistiller\Parser\Definitions\SimpleTypeDefinition;
 use DaveRandom\XsdDistiller\Parser\Exceptions\InvalidElementDefinitionException;
 use DaveRandom\XsdDistiller\Parser\Exceptions\InvalidReferenceException;
 use DaveRandom\XsdDistiller\Parser\Exceptions\InvalidTypeDefinitionException;
+use const DaveRandom\XsdDistiller\XML_SCHEMA_URI;
 use function DaveRandom\XsdDistiller\domelement_get_target_namespace;
+use function DaveRandom\XsdDistiller\parse_fully_qualified_entity_name_from_attribute;
 
 final class EntityParser
 {
@@ -22,13 +23,20 @@ final class EntityParser
      * @param \DOMElement $typeNode
      * @param \DOMElement $restrictionNode
      * @return RestrictionTypeDefinition
-     * @throws InvalidReferenceException
+     * @throws InvalidTypeDefinitionException
      */
     private function parseRestrictionType(\DOMElement $typeNode, \DOMElement $restrictionNode): RestrictionTypeDefinition
     {
         $location = new DefinitionLocation($typeNode);
         $name = $this->getTypeName($typeNode);
-        $baseName = parse_fully_qualified_entity_name_from_attribute($restrictionNode, 'base');
+
+        try {
+            $baseName = parse_fully_qualified_entity_name_from_attribute($restrictionNode, 'base');
+        } catch (InvalidReferenceException $e) {
+            throw new InvalidTypeDefinitionException(
+                "Missing or invalid base type referenced by restriction type {$name} defined at {$location}"
+            );
+        }
 
         // todo: actually parse restriction info
 
@@ -39,13 +47,20 @@ final class EntityParser
      * @param \DOMElement $typeNode
      * @param \DOMElement $listNode
      * @return ListTypeDefinition
-     * @throws InvalidReferenceException
+     * @throws InvalidTypeDefinitionException
      */
     private function parseListType(\DOMElement $typeNode, \DOMElement $listNode): ListTypeDefinition
     {
         $location = new DefinitionLocation($typeNode);
         $name = $this->getTypeName($typeNode);
-        $baseName = parse_fully_qualified_entity_name_from_attribute($listNode, 'base');
+
+        try {
+            $baseName = parse_fully_qualified_entity_name_from_attribute($listNode, 'base');
+        } catch (InvalidReferenceException $e) {
+            throw new InvalidTypeDefinitionException(
+                "Missing or invalid base type referenced by list type {$name} defined at {$location}"
+            );
+        }
 
         // todo: actually parse list info
 
@@ -58,8 +73,8 @@ final class EntityParser
      */
     private function getTypeName(\DOMElement $node): EntityName
     {
-        return $node->hasAttribute('name')
-            ? new FullyQualifiedName(domelement_get_target_namespace($node), $node->getAttribute('name'))
+        return $node->hasAttributeNS(XML_SCHEMA_URI, 'name')
+            ? new FullyQualifiedName(domelement_get_target_namespace($node), $node->getAttributeNS(XML_SCHEMA_URI, 'name'))
             : new EntityName('##anon##' . $node->getNodePath());
     }
 
@@ -68,7 +83,6 @@ final class EntityParser
      * @param \DOMElement $node
      * @return SimpleTypeDefinition
      * @throws InvalidTypeDefinitionException
-     * @throws InvalidReferenceException
      */
     public function parseSimpleType(ParsingContext $ctx, \DOMElement $node): SimpleTypeDefinition
     {
@@ -95,7 +109,6 @@ final class EntityParser
      * @param \DOMElement $node
      * @return ComplexTypeDefinition
      * @throws InvalidElementDefinitionException
-     * @throws InvalidReferenceException
      * @throws InvalidTypeDefinitionException
      */
     public function parseComplexType(ParsingContext $ctx, \DOMElement $node): ComplexTypeDefinition
@@ -113,7 +126,14 @@ final class EntityParser
 
         if ($extensionNodes->length === 1) {
             $membersParent = $extensionNodes->item(0);
-            $baseTypeName = parse_fully_qualified_entity_name_from_attribute($membersParent, 'base');
+
+            try {
+                $baseTypeName = parse_fully_qualified_entity_name_from_attribute($membersParent, 'base');
+            } catch (InvalidReferenceException $e) {
+                throw new InvalidTypeDefinitionException(
+                    "Base type not defined for extension for complex type {$name} defined at {$location}"
+                );
+            }
         }
 
         // todo: support content container other than <xs:sequence>
@@ -130,26 +150,27 @@ final class EntityParser
      * @param bool $root
      * @return ElementDefinition
      * @throws InvalidElementDefinitionException
-     * @throws InvalidReferenceException
      * @throws InvalidTypeDefinitionException
      */
     public function parseElement(ParsingContext $ctx, \DOMElement $node, bool $root): ElementDefinition
     {
         $location = new DefinitionLocation($node);
 
-        if (!$node->hasAttribute('name')) {
+        if (!$node->hasAttributeNS(XML_SCHEMA_URI, 'name')) {
             throw new InvalidElementDefinitionException("Element does not define name at {$location}");
         }
 
         $name = $root
-            ? new FullyQualifiedName(domelement_get_target_namespace($node), $node->getAttribute('name'))
-            : new EntityName($node->getAttribute('name'));
+            ? new FullyQualifiedName(domelement_get_target_namespace($node), $node->getAttributeNS(XML_SCHEMA_URI, 'name'))
+            : new EntityName($node->getAttributeNS(XML_SCHEMA_URI, 'name'));
 
-        $minOccurs = $node->hasAttribute('minOccurs') ? (int)$node->getAttribute('minOccurs') : 1;
+        $minOccurs = $node->hasAttributeNS(XML_SCHEMA_URI, 'minOccurs')
+            ? (int)$node->getAttributeNS(XML_SCHEMA_URI, 'minOccurs')
+            : 1;
         $maxOccurs = 1;
 
-        if ($node->hasAttribute('maxOccurs')) {
-            $maxOccursStr = $node->getAttribute('maxOccurs');
+        if ($node->hasAttributeNS(XML_SCHEMA_URI, 'maxOccurs')) {
+            $maxOccursStr = $node->getAttributeNS(XML_SCHEMA_URI, 'maxOccurs');
 
             $maxOccurs = $maxOccursStr !== 'unbounded'
                 ? (int)$maxOccurs
@@ -160,8 +181,12 @@ final class EntityParser
             throw new InvalidElementDefinitionException("minOccurs larger than maxOccurs for element {$name} defined at {$location}");
         }
 
-        if ($node->hasAttribute('type')) {
-            $typeName = parse_fully_qualified_entity_name_from_attribute($node, 'type');
+        if ($node->hasAttributeNS(XML_SCHEMA_URI, 'type')) {
+            try {
+                $typeName = parse_fully_qualified_entity_name_from_attribute($node, 'type');
+            } catch (InvalidReferenceException $e) {
+                throw new InvalidElementDefinitionException("Invalid type referenced by element {$name} defined at {$location}");
+            }
 
             return new ElementDefinition($location, $name, $typeName, $minOccurs, $maxOccurs);
         }

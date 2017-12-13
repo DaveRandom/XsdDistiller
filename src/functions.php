@@ -27,12 +27,19 @@ function domelement_get_target_namespace(\DOMElement $element): string
 /**
  * @param \DOMElement $node
  * @param string $attribute
+ * @param string|null $namespace
  * @return \DaveRandom\XsdDistiller\FullyQualifiedName
  * @throws InvalidReferenceException
  */
-function parse_fully_qualified_entity_name_from_attribute(\DOMElement $node, string $attribute): FullyQualifiedName
+function parse_fully_qualified_entity_name_from_attribute(\DOMElement $node, string $attribute, string $namespace = null): FullyQualifiedName
 {
-    $nameParts = \explode(':', $node->getAttribute($attribute));
+    $namespace = $namespace ?? $node->namespaceURI;
+
+    if (!$node->hasAttributeNS($namespace, $attribute)) {
+        throw new InvalidReferenceException("Attribute {$attribute}@{$namespace} not defined for element");
+    }
+
+    $nameParts = \explode(':', $node->getAttributeNS($namespace, $attribute));
 
     switch (\count($nameParts)) {
         case 1: {
@@ -47,7 +54,7 @@ function parse_fully_qualified_entity_name_from_attribute(\DOMElement $node, str
             break;
         }
 
-        default: throw new InvalidReferenceException('Invalid type reference ' . $node->getAttribute($attribute));
+        default: throw new InvalidReferenceException('Invalid type reference ' . $node->getAttributeNS($namespace, $attribute));
     }
 
     return new FullyQualifiedName($namespace, $name);
