@@ -49,7 +49,7 @@ final class EntityResolver
         $baseName = $typeDef->getBaseTypeName();
 
         // built-in type
-        if ($typeDef instanceof SimpleTypeDefinition && $baseName->getNamespace() === XML_SCHEMA_URI) {
+        if ($baseName->getNamespace() === XML_SCHEMA_URI) {
             return self::getBuiltInType($baseName);
         }
 
@@ -140,17 +140,21 @@ final class EntityResolver
     {
         $memberTypeName = $elementDef->getTypeName();
 
-        if (!$ctx->types->contains($memberTypeName)) {
-            $description = $typeDef !== null
-                ? "member {$elementDef->getName()} of {$typeDef}"
-                : (string)$elementDef;
-
-            throw new MissingDefinitionException(
-                "Type {$memberTypeName} was not defined in the document, referenced as type of {$description}"
-            );
+        if ($ctx->types->contains($memberTypeName)) {
+            return $this->createElement($elementDef, $ctx->types->get($memberTypeName));
         }
 
-        return $this->createElement($elementDef, $ctx->types->get($memberTypeName));
+        if ($memberTypeName instanceof FullyQualifiedName && $memberTypeName->getNamespace() === XML_SCHEMA_URI) {
+            return $this->createElement($elementDef, self::getBuiltInType($memberTypeName));
+        }
+
+        $description = $typeDef !== null
+            ? "member {$elementDef->getName()} of {$typeDef}"
+            : (string)$elementDef;
+
+        throw new MissingDefinitionException(
+            "Type {$memberTypeName} was not defined in the document, referenced as type of {$description}"
+        );
     }
 
     /**
@@ -188,7 +192,7 @@ final class EntityResolver
      */
     public function resolveType(ParsingContext $ctx, TypeDefinition $typeDef): Type
     {
-        if (!$ctx->types->contains($typeDef->getName())) {
+        if ($ctx->types->contains($typeDef->getName())) {
             return $ctx->types->get($typeDef->getName());
         }
 
