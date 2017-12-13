@@ -1,0 +1,19 @@
+{
+    "name": "daverandom/xsd-distiller",
+    "description": "Parses XSD schema documents into data structures",
+    "minimum-stability": "dev",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Chris Wright",
+            "email": "daverandom@php.net"
+        }
+    ],
+    "autoload": {
+        "psr-4": { "DaveRandom\\XsdDistiller\\": "src/" }
+    },
+    "require": {
+        "php": ">=7.1",
+        "room11/dom-utils": "^1.1"
+    }
+}
