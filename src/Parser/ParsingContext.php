@@ -35,6 +35,7 @@ final class ParsingContext
         $this->xpath = $xpath;
 
         $this->typeDefinitions = new TypeDefinitionRegistry;
+        $this->rootElementDefinitions = new ElementDefinitionRegistry;
         $this->types = new TypeRegistry;
     }
 }

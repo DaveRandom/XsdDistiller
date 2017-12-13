@@ -4,8 +4,8 @@ namespace DaveRandom\XsdDistiller;
 
 abstract class Registry implements \IteratorAggregate
 {
-    protected $itemsWithNames;
-    protected $itemValuesOnly;
+    protected $itemsWithNames = [];
+    protected $itemValuesOnly = [];
 
     /**
      * @param EntityName $name

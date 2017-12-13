@@ -39,7 +39,7 @@ final class Parser
      */
     private function parseTypes(ParsingContext $ctx): void
     {
-        foreach ($ctx->xpath->query('/xs:simpleType') as $node) {
+        foreach ($ctx->xpath->query('/xs:schema/xs:simpleType') as $node) {
             $type = $this->typeParser->parseSimpleType($ctx, $node);
 
             if (!($type->getName() instanceof FullyQualifiedName)) {
@@ -49,7 +49,7 @@ final class Parser
             $ctx->typeDefinitions->add($type);
         }
 
-        foreach ($ctx->xpath->query('/xs:complexType') as $node) {
+        foreach ($ctx->xpath->query('/xs:schema/xs:complexType') as $node) {
             $type = $this->typeParser->parseComplexType($ctx, $node);
 
             if (!($type->getName() instanceof FullyQualifiedName)) {
@@ -68,7 +68,7 @@ final class Parser
      */
     private function parseRootElements(ParsingContext $ctx): void
     {
-        foreach ($ctx->xpath->query('/xs:element') as $node) {
+        foreach ($ctx->xpath->query('/xs:schema/xs:element') as $node) {
             $ctx->rootElementDefinitions->add($this->typeParser->parseElement($ctx, $node, true));
         }
     }
@@ -173,7 +173,7 @@ final class Parser
 
         $doc = new \DOMDocument;
         $doc->documentURI = $rootElement->ownerDocument->documentURI;
-        $doc->appendChild($doc->importNode($rootElement));
+        $doc->appendChild($doc->importNode($rootElement, true));
 
         return $this->parseDocument($doc);
     }
