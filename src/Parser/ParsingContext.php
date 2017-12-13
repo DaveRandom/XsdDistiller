@@ -5,6 +5,7 @@ namespace DaveRandom\XsdDistiller\Parser;
 use DaveRandom\XsdDistiller\Entities\Registries\TypeRegistry;
 use DaveRandom\XsdDistiller\Parser\Definitions\Registries\ElementDefinitionRegistry;
 use DaveRandom\XsdDistiller\Parser\Definitions\Registries\TypeDefinitionRegistry;
+use const DaveRandom\XsdDistiller\XML_SCHEMA_URI;
 
 final class ParsingContext
 {
@@ -13,6 +14,9 @@ final class ParsingContext
 
     /** @var \DOMXPath */
     public $xpath;
+
+    /** @var \DOMElement */
+    public $rootElement;
 
     /** @var TypeDefinitionRegistry */
     public $typeDefinitions;
@@ -29,10 +33,13 @@ final class ParsingContext
     /** @var bool[] */
     public $resolvingTypes = [];
 
-    public function __construct(\DOMDocument $document, \DOMXPath $xpath)
+    public function __construct(\DOMDocument $document, \DOMElement $rootElement)
     {
         $this->document = $document;
-        $this->xpath = $xpath;
+        $this->rootElement = $rootElement;
+
+        $this->xpath = new \DOMXPath($document);
+        $this->xpath->registerNamespace('xs', XML_SCHEMA_URI);
 
         $this->typeDefinitions = new TypeDefinitionRegistry;
         $this->rootElementDefinitions = new ElementDefinitionRegistry;

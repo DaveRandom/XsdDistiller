@@ -39,7 +39,7 @@ final class Parser
      */
     private function parseTypes(ParsingContext $ctx): void
     {
-        foreach ($ctx->xpath->query('/xs:schema/xs:simpleType') as $node) {
+        foreach ($ctx->xpath->query('./xs:simpleType', $ctx->rootElement) as $node) {
             $type = $this->typeParser->parseSimpleType($ctx, $node);
 
             if (!($type->getName() instanceof FullyQualifiedName)) {
@@ -49,7 +49,7 @@ final class Parser
             $ctx->typeDefinitions->add($type);
         }
 
-        foreach ($ctx->xpath->query('/xs:schema/xs:complexType') as $node) {
+        foreach ($ctx->xpath->query('./xs:complexType', $ctx->rootElement) as $node) {
             $type = $this->typeParser->parseComplexType($ctx, $node);
 
             if (!($type->getName() instanceof FullyQualifiedName)) {
@@ -68,7 +68,7 @@ final class Parser
      */
     private function parseRootElements(ParsingContext $ctx): void
     {
-        foreach ($ctx->xpath->query('/xs:schema/xs:element') as $node) {
+        foreach ($ctx->xpath->query('./xs:element', $ctx->rootElement) as $node) {
             $ctx->rootElementDefinitions->add($this->typeParser->parseElement($ctx, $node, true));
         }
     }
@@ -137,17 +137,18 @@ final class Parser
 
     /**
      * @param \DOMDocument $document
+     * @param \DOMElement|null $rootElement
      * @return Schema
      * @throws ParseErrorException
      */
-    public function parseDocument(\DOMDocument $document): Schema
+    public function parseDocument(\DOMDocument $document, \DOMElement $rootElement = null): Schema
     {
-        $this->validateDocument($document);
+        if ($rootElement === null) {
+            $rootElement = $document->documentElement;
+            $this->validateDocument($document);
+        }
 
-        $xpath = new \DOMXPath($document);
-        $xpath->registerNamespace('xs', XML_SCHEMA_URI);
-
-        $ctx = new ParsingContext($document, $xpath);
+        $ctx = new ParsingContext($document, $rootElement);
 
         $this->parseTypes($ctx);
         $this->parseRootElements($ctx);
@@ -165,17 +166,7 @@ final class Parser
      */
     public function parseDocumentFragment(\DOMElement $rootElement): Schema
     {
-        if ($rootElement->namespaceURI !== XML_SCHEMA_URI || $rootElement->localName !== 'schema') {
-            throw new InvalidDocumentException(
-                'Root element of XML schema must be <schema> in the ' . XML_SCHEMA_URI . ' namespace'
-            );
-        }
-
-        $doc = new \DOMDocument;
-        $doc->documentURI = $rootElement->ownerDocument->documentURI;
-        $doc->appendChild($doc->importNode($rootElement, true));
-
-        return $this->parseDocument($doc);
+        return $this->parseDocument($rootElement->ownerDocument, $rootElement);
     }
 
     /**
