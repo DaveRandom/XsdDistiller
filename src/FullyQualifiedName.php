@@ -16,7 +16,7 @@ final class FullyQualifiedName extends EntityName
 
     public function __construct(string $namespace, string $entityName)
     {
-        parent::__construct("{$namespace}\0{$entityName}");
+        parent::__construct("{$entityName}@{$namespace}");
 
         $this->namespace = $namespace;
         $this->entityName = $entityName;
