@@ -4,8 +4,15 @@ namespace DaveRandom\XsdDistiller;
 
 final class FullyQualifiedName extends EntityName
 {
+    private static $anyTypeName;
+
     private $namespace;
     private $entityName;
+
+    public static function getAnyTypeName()
+    {
+        return self::$anyTypeName ?? (self::$anyTypeName = new FullyQualifiedName(XML_SCHEMA_URI, 'anyType'));
+    }
 
     public function __construct(string $namespace, string $entityName)
     {

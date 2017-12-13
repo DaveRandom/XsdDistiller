@@ -210,6 +210,6 @@ final class EntityParser
             return new ElementDefinition($location, $name, $typeName, $minOccurs, $maxOccurs);
         }
 
-        throw new InvalidElementDefinitionException("Cannot determine type for element {$name} defined at {$location}");
+        return new ElementDefinition($location, $name, FullyQualifiedName::getAnyTypeName(), $minOccurs, $maxOccurs);
     }
 }
