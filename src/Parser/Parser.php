@@ -16,25 +16,28 @@ use DaveRandom\XsdDistiller\Parser\Exceptions\LoadErrorException;
 use DaveRandom\XsdDistiller\Parser\Exceptions\MissingDefinitionException;
 use DaveRandom\XsdDistiller\Parser\Exceptions\ParseErrorException;
 use DaveRandom\XsdDistiller\Schema;
+use DaveRandom\XsdDistiller\XmlSchemaDocument;
 use Room11\DOMUtils\LibXMLFatalErrorException;
-use const DaveRandom\XsdDistiller\RESOURCES_ROOT_DIR;
-use const DaveRandom\XsdDistiller\XML_SCHEMA_URI;
 
 final class Parser
 {
     private $typeParser;
     private $typeResolver;
+    private $xsdSchema;
 
+    /**
+     * @throws InvalidDocumentException
+     */
     public function __construct()
     {
         $this->typeParser = new EntityParser;
         $this->typeResolver = new EntityResolver;
+        $this->xsdSchema = XmlSchemaDocument::getSchemaSchema();
     }
 
     /**
      * @param ParsingContext $ctx
      * @throws InvalidTypeDefinitionException
-     * @throws InvalidReferenceException
      * @throws InvalidElementDefinitionException
      */
     private function parseTypes(ParsingContext $ctx): void
@@ -63,7 +66,6 @@ final class Parser
     /**
      * @param ParsingContext $ctx
      * @throws InvalidElementDefinitionException
-     * @throws InvalidReferenceException
      * @throws InvalidTypeDefinitionException
      */
     private function parseRootElements(ParsingContext $ctx): void
@@ -120,33 +122,14 @@ final class Parser
 
     /**
      * @param \DOMDocument $document
-     * @throws InvalidDocumentException
-     */
-    private function validateDocument(\DOMDocument $document): void
-    {
-        if ($document->documentElement->namespaceURI !== XML_SCHEMA_URI || $document->documentElement->localName !== 'schema') {
-            throw new InvalidDocumentException(
-                'Root element of XML schema must be <schema> in the ' . XML_SCHEMA_URI . ' namespace'
-            );
-        }
-
-        if (!$document->schemaValidate(RESOURCES_ROOT_DIR . '/schema.xsd')) {
-            throw new InvalidDocumentException("Schema validation failed");
-        }
-    }
-
-    /**
-     * @param \DOMDocument $document
      * @param \DOMElement|null $rootElement
      * @return Schema
      * @throws ParseErrorException
      */
     public function parseDocument(\DOMDocument $document, \DOMElement $rootElement = null): Schema
     {
-        if ($rootElement === null) {
-            $rootElement = $document->documentElement;
-            $this->validateDocument($document);
-        }
+        $this->xsdSchema->validate($rootElement ?? $document);
+        $rootElement = $rootElement ?? $document->documentElement;
 
         $ctx = new ParsingContext($document, $rootElement);
 

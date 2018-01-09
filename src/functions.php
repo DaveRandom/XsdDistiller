@@ -3,6 +3,7 @@
 namespace DaveRandom\XsdDistiller;
 
 use DaveRandom\XsdDistiller\Parser\Exceptions\InvalidReferenceException;
+const XML_NAMESPACE_URI = 'http://www.w3.org/2000/xmlns/';
 const XML_SCHEMA_URI = 'http://www.w3.org/2001/XMLSchema';
 
 \define(__NAMESPACE__ . '\\LIB_ROOT_DIR', \realpath(__DIR__ . '/..'));
